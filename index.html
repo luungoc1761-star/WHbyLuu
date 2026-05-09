@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Kho - Warehouse Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+    <!-- Navbar -->
+    <nav class="bg-indigo-600 text-white shadow-lg p-4 mb-6">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold flex items-center gap-2">
+                <i class="fas fa-warehouse"></i> WMS - Quản Lý Kho
+            </h1>
+            <div id="status" class="text-sm bg-indigo-500 px-3 py-1 rounded-full">
+                Đang kết nối...
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4">
+        <!-- Filter Section -->
+        <div class="bg-white p-6 rounded-xl shadow-sm mb-6 border border-gray-100">
+            <div class="flex flex-col md:flex-row md:items-center gap-4">
+                <div class="relative flex-1">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                        <i class="fas fa-search"></i>
+                    </span>
+                    <input 
+                        type="text" 
+                        id="searchInput" 
+                        onkeyup="filterData()" 
+                        placeholder="Tìm kiếm thông minh (Item code, Box No, Cont...)" 
+                        class="pl-10 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                    >
+                </div>
+                <button onclick="loadData()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center justify-center gap-2">
+                    <i class="fas fa-sync-alt"></i> Làm mới
+                </button>
+            </div>
+        </div>
+
+        <!-- Table Section -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-100 text-gray-700 uppercase text-sm leading-normal">
+                            <th class="py-3 px-6 font-semibold">Item Code</th>
+                            <th class="py-3 px-6 font-semibold">Box No</th>
+                            <th class="py-3 px-6 font-semibold">Cont</th>
+                            <th class="py-3 px-6 font-semibold">Số lượng</th>
+                            <th class="py-3 px-6 font-semibold">Vị trí</th>
+                            <th class="py-3 px-6 font-semibold">Ghi chú</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="text-gray-600 text-sm font-light">
+                        <!-- Data will be injected here -->
+                        <tr>
+                            <td colspan="6" class="py-10 text-center">
+                                <div class="flex justify-center items-center gap-3">
+                                    <div class="loader"></div>
+                                    <span>Đang tải dữ liệu từ Google Sheet...</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // THAY URL NÀY BẰNG URL WEB APP CỦA BẠN
+        const GAS_URL = "URL_WEB_APP_CỦA_BẠN_TẠI_ĐÂY"; 
+        
+        let allData = [];
+
+        async function loadData() {
+            const tableBody = document.getElementById('tableBody');
+            const status = document.getElementById('status');
+            
+            try {
+                status.innerText = "Đang tải...";
+                const response = await fetch(GAS_URL);
+                const data = await response.json();
+                
+                allData = data;
+                renderTable(allData);
+                
+                status.innerText = "Kết nối thành công";
+                status.classList.replace('bg-indigo-500', 'bg-green-500');
+            } catch (error) {
+                console.error("Error fetching data:", error);
+                status.innerText = "Lỗi kết nối!";
+                status.classList.replace('bg-indigo-500', 'bg-red-500');
+                tableBody.innerHTML = `<tr><td colspan="6" class="py-10 text-center text-red-500">Không thể tải dữ liệu. Vui lòng kiểm tra lại URL Web App và quyền truy cập.</td></tr>`;
+            }
+        }
+
+        function renderTable(data) {
+            const tableBody = document.getElementById('tableBody');
+            if (data.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="6" class="py-10 text-center">Không tìm thấy dữ liệu.</td></tr>`;
+                return;
+            }
+
+            tableBody.innerHTML = data.map(row => `
+                <tr class="border-b border-gray-200 hover:bg-gray-50 transition-colors">
+                    <td class="py-3 px-6 font-medium text-indigo-600">${row['Item code'] || ''}</td>
+                    <td class="py-3 px-6">${row['Box No'] || ''}</td>
+                    <td class="py-3 px-6">${row['Cont'] || ''}</td>
+                    <td class="py-3 px-6">${row['Số lượng'] || ''}</td>
+                    <td class="py-3 px-6">${row['Vị trí'] || ''}</td>
+                    <td class="py-3 px-6">${row['Ghi chú'] || ''}</td>
+                </tr>
+            `).join('');
+        }
+
+        function filterData() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            
+            const filtered = allData.filter(row => {
+                // Tìm kiếm thông minh trên 3 trường: Item code, Box No, Cont
+                const itemCode = String(row['Item code'] || '').toLowerCase();
+                const boxNo = String(row['Box No'] || '').toLowerCase();
+                const cont = String(row['Cont'] || '').toLowerCase();
+                
+                return itemCode.includes(searchTerm) || 
+                       boxNo.includes(searchTerm) || 
+                       cont.includes(searchTerm);
+            });
+            
+            renderTable(filtered);
+        }
+
+        // Tự động load dữ liệu khi mở trang
+        window.onload = loadData;
+    </script>
+</body>
+</html>
